@@ -1,0 +1,468 @@
+/* --- ESTILOS DE ALÉRGENOS --- */
+.alergenos-list { 
+    display: flex; 
+    gap: 8px; 
+    margin-top: 10px; 
+    flex-wrap: wrap; 
+    align-items: center;
+}
+.alergenos-list img { 
+    width: 24px;  
+    height: 24px; 
+    object-fit: contain; 
+    vertical-align: middle; 
+    display: inline-block;
+}
+.alergenos-list img[src*="APIO"], .alergenos-list img[src*="CACAHUETE"] { 
+    transform: scale(1.2); 
+    margin: 0 3px;
+}
+.alergenos-list img[src*="VEGANO"] { 
+    transform: scale(1.4); 
+    margin: 0 5px;
+}
+/* --- FIN ALÉRGENOS --- */
+
+:root { 
+    var(--bg): #ffffff; 
+    var(--text): #1c1c1e; 
+    var(--grey): #8e8e93; 
+    var(--border): #e5e5ea; 
+}
+
+body { 
+    font-family: -apple-system, system-ui, sans-serif; 
+    background: var(--bg); 
+    margin: 0; 
+    color: var(--text); 
+    -webkit-tap-highlight-color: transparent; 
+}
+
+header { 
+    background: rgba(255,255,255,0.95); 
+    position: sticky; 
+    top: 0; 
+    z-index: 100; 
+    padding: 10px; 
+    border-bottom: 1px solid var(--border); 
+    backdrop-filter: blur(10px); 
+}
+
+/* MODIFICADO: Distribuido con space-between para fijar un logo a la izquierda y otro a la derecha */
+.header-logos {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+/* MODIFICADO: Se remueven las alturas globales fijas para especificarlas individualmente abajo */
+.header-logo {
+    object-fit: contain;
+    vertical-align: middle;
+}
+
+/* NUEVO: El logo de la izquierda se define con el doble de tamaño (48px) */
+img.header-logo[src*="logo_web02.png"] {
+    height: 48px;
+    max-height: 48px;
+}
+
+/* NUEVO: Estilo para el título centrado del menú en el header */
+#header-menu-title {
+    font-size: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text);
+    text-align: center;
+    flex: 1;
+}
+
+/* NUEVO: El logo de la derecha se define con tamaño estándar (24px) */
+img.header-logo[src*="negro.png"] {
+    height: 24px;
+    max-height: 24px;
+}
+
+#language-selector { 
+    display: flex; 
+    flex-wrap: wrap; 
+    justify-content: center; 
+    align-items: center; 
+    background: #f2f2f7; 
+    border-radius: 10px; 
+    padding: 4px; 
+    gap: 4px; 
+    margin-bottom: 10px; 
+}
+
+#language-selector button { 
+    flex: 1 1 25%; 
+    border: none; 
+    background: none; 
+    padding: 8px 4px; 
+    font-size: 13px; 
+    font-weight: 600; 
+    border-radius: 7px; 
+    cursor: pointer; 
+    white-space: nowrap; 
+}
+
+#language-selector button.active { 
+    background: white; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+}
+
+#more-langs {
+    flex: 1 1 25%;
+    padding: 7px 4px;
+    border-radius: 7px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    color: var(--text);
+    outline: none;
+}
+
+#more-langs:focus {
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.category-wrapper { 
+    display: flex; 
+    overflow-x: auto; 
+    padding: 5px 0; 
+    scrollbar-width: none; 
+}
+.category-wrapper::-webkit-scrollbar { display: none; }
+
+#category-selector { display: flex; gap: 8px; }
+
+.cat-btn { 
+    white-space: nowrap; 
+    background: #f2f2f7; 
+    border: none; 
+    padding: 8px 15px; 
+    border-radius: 20px; 
+    font-size: 14px; 
+    font-weight: 500; 
+    cursor: pointer; 
+}
+.cat-btn.active { 
+    background: var(--text); 
+    color: white; 
+}
+
+#menu-container { 
+    padding: 15px; 
+    max-width: 600px; 
+    margin: 0 auto; 
+    min-height: 100vh; 
+}
+
+#current-category-name { 
+    font-size: 24px; 
+    margin-bottom: 20px; 
+    border-bottom: 2px solid var(--text); 
+    padding-bottom: 5px; 
+}
+
+.item-row { 
+    display: flex; 
+    flex-wrap: wrap; 
+    justify-content: space-between; 
+    align-items: flex-start; 
+    padding: 15px 0; 
+    border-bottom: 1px solid var(--border); 
+}
+
+.item-content { flex: 1; }
+
+.name-selected { 
+    font-weight: 700; 
+    font-size: 17px; 
+    display: block; 
+}
+
+.name-secondary { 
+    color: var(--grey); 
+    font-size: 14px; 
+    font-style: italic; 
+    display: block; 
+    margin-top: 2px; 
+}
+
+.price-box { 
+    font-weight: 700; 
+    font-size: 17px; 
+    margin-left: 15px; 
+    white-space: nowrap; 
+}
+
+/* NUEVO: miniatura fija y siempre visible para el plato especial ID 12990 (vino "El Tenista"
+   en Sugerencias). A propósito pequeña — no debe "comerse" la pantalla de Sugerencias. */
+.tenista-inline-thumb-wrapper {
+    flex: 0 0 100%;
+    width: 100%;
+    text-align: center;
+    margin-top: 10px;
+}
+.tenista-inline-thumb {
+    width: 150px;
+    height: auto;
+    object-fit: contain;
+    border-radius: 10px;
+}
+@media (max-width: 480px) {
+    .tenista-inline-thumb {
+        width: 120px;
+        height: auto;
+        border-radius: 8px;
+    }
+}
+
+.emoji-photo {  
+    display: inline-block; 
+    cursor: pointer;  
+    margin-left: 8px;  
+    font-size: 20px;  
+    vertical-align: middle; 
+    animation: gentle-pulse 2s infinite ease-in-out;
+}
+
+@keyframes gentle-pulse { 
+    0% { transform: scale(1); } 
+    50% { transform: scale(1.15); } 
+    100% { transform: scale(1); }
+}
+
+/* NUEVO: Estilos para el icono de información del plato y su modal de preguntas */
+.emoji-info {
+    display: inline-block;
+    cursor: pointer;
+    margin-left: 8px;
+    font-size: 20px;
+    vertical-align: middle;
+    transition: transform 0.2s ease;
+}
+.emoji-info:hover {
+    transform: scale(1.2);
+}
+
+#info-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9);
+    z-index: 3000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.info-modal-content {
+    background: #fff;
+    padding: 25px;
+    padding-top: 60px; /* NUEVO: espacio extra arriba para que el texto no quede tapado por el botón "×" (absolute, 40x40 en top:15px/right:20px) */
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    animation: info-modal-appear 0.3s ease;
+}
+@keyframes info-modal-appear {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+.info-modal-content .close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    color: #333;
+    font-size: 30px;
+    cursor: pointer;
+    line-height: 1;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+.info-modal-content .close-modal:hover {
+    background: #e2e8f0;
+}
+.info-desc {
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 15px;
+    color: #333;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.info-qa {
+    margin-bottom: 10px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #555;
+    border-left: 4px solid #007BFF;
+    padding-left: 10px;
+}
+.info-qa b {
+    font-weight: 700;
+    color: #222;
+}
+.info-a {
+    color: #444;
+    display: block;
+    margin-top: 4px;
+}
+
+#photo-modal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(255,255,255,0.97); 
+    z-index: 2000; 
+    justify-content: center; 
+    align-items: center; 
+}
+
+#modal-img { 
+    max-width: 90%; 
+    max-height: 80%; 
+    border-radius: 5px; 
+    box-shadow: 0 0 20px rgba(0,0,0,0.15); 
+}
+
+.nav-btn { 
+    position: absolute; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    background: rgba(0,0,0,0.08); 
+    border: none; 
+    color: #222; 
+    font-size: 30px; 
+    padding: 10px 15px; 
+    border-radius: 50%; 
+    cursor: pointer; 
+    display: none; 
+}
+#prev-btn { left: 10px; } 
+#next-btn { right: 10px; }
+
+.close-modal { 
+    position: absolute; 
+    top: 20px; 
+    right: 25px; 
+    color: #222; 
+    font-size: 40px; 
+    cursor: pointer; 
+    line-height: 1; 
+}
+
+.sub-category-title { 
+    margin-top: 30px; 
+    padding-top: 10px; 
+    border-top: 2px solid #eee; 
+    font-size: 20px; 
+}
+
+/* NUEVO: Estilos estructurales del Skeleton Loader para simular inmediatez de datos con baja cobertura móvil */
+.skeleton-row {
+    pointer-events: none;
+}
+.skeleton-text {
+    display: block;
+    height: 14px;
+    background: linear-gradient(90deg, #f2f2f7 25%, #e5e5ea 50%, #f2f2f7 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite linear;
+    border-radius: 4px;
+    margin-bottom: 6px;
+}
+.skeleton-text.line-70 { width: 70%; height: 16px; }
+.skeleton-text.line-60 { width: 60%; height: 16px; }
+.skeleton-text.line-50 { width: 50%; height: 16px; }
+.skeleton-text.line-40 { width: 40%; }
+.skeleton-text.line-30 { width: 30%; }
+.skeleton-text.line-20 { width: 45px; height: 16px; }
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* =========================================================
+   NUEVO: Ajustes específicos para móvil — el texto se veía
+   pequeño y el modal de info era demasiado bajo/apretado.
+   ========================================================= */
+@media (max-width: 480px) {
+    #menu-container {
+        padding: 12px;
+    }
+    #current-category-name {
+        font-size: 26px;
+    }
+    .sub-category-title {
+        font-size: 22px;
+    }
+    .name-selected {
+        font-size: 19px;
+    }
+    .name-secondary {
+        font-size: 15px;
+    }
+    .price-box {
+        font-size: 19px;
+    }
+    .cat-btn {
+        font-size: 15px;
+        padding: 9px 16px;
+    }
+    .emoji-photo,
+    .emoji-info {
+        font-size: 22px;
+    }
+    .alergenos-list img {
+        width: 26px;
+        height: 26px;
+    }
+
+    /* Box de info: más alargado verticalmente para dar sitio a texto más grande */
+    .info-modal-content {
+        width: 94%;
+        max-width: none;
+        max-height: 88vh;
+        padding: 22px 20px;
+        padding-top: 55px; /* NUEVO: mismo motivo que en desktop — aquí el botón queda en top:10px, 40px de alto */
+    }
+    .info-desc {
+        font-size: 18px;
+        line-height: 1.6;
+    }
+    .info-qa {
+        font-size: 17px;
+        line-height: 1.6;
+        padding-left: 12px;
+    }
+    .info-modal-content .close-modal {
+        top: 10px;
+        right: 12px;
+    }
+}

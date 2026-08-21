@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>US Open Menu</title>
+    <link rel="icon" type="image/png" href="imagenes/icon.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="header-logos">
+            <img src="logo_web02.png" alt="Logo US Open" class="header-logo">
+            <span id="header-menu-title"></span>
+            <img src="negro.png" alt="Logo Negro" class="header-logo">
+        </div>
+
+        <div id="language-selector">
+            <button id="btn-ES" onclick="changeLanguage('ES')" class="active">Español</button>
+            <button id="btn-EN" onclick="changeLanguage('EN')">English</button>
+            <button id="btn-DE" onclick="changeLanguage('DE')">Deutsch</button>
+            <button id="btn-FR" onclick="changeLanguage('FR')">Français</button>
+            <button id="btn-IT" onclick="changeLanguage('IT')">Italiano</button>
+            <select id="more-langs" onchange="changeLanguage(this.value)">
+                <option value="">🌐 Más...</option>
+            </select>
+        </div>
+        <div class="category-wrapper">
+            <nav id="category-selector"></nav>
+        </div>
+    </header>
+
+    <main id="menu-container">
+        <h2 id="current-category-name"></h2>
+        <div id="items-list">
+            <div class="item-row skeleton-row">
+                <div class="item-content">
+                    <span class="skeleton-text line-70"></span>
+                    <span class="skeleton-text line-40"></span>
+                </div>
+                <div class="price-box">
+                    <span class="skeleton-text line-20"></span>
+                </div>
+            </div>
+            <div class="item-row skeleton-row">
+                <div class="item-content">
+                    <span class="skeleton-text line-60"></span>
+                    <span class="skeleton-text line-30"></span>
+                </div>
+                <div class="price-box">
+                    <span class="skeleton-text line-20"></span>
+                </div>
+            </div>
+            <div class="item-row skeleton-row">
+                <div class="item-content">
+                    <span class="skeleton-text line-50"></span>
+                    <span class="skeleton-text line-40"></span>
+                </div>
+                <div class="price-box">
+                    <span class="skeleton-text line-20"></span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="photo-modal" onclick="closeModal()">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <button id="prev-btn" class="nav-btn" onclick="changePhoto(-1); event.stopPropagation();">❮</button>
+        <img id="modal-img" src="" alt="Vista previa" onclick="event.stopPropagation();">
+        <button id="next-btn" class="nav-btn" onclick="changePhoto(1); event.stopPropagation();">❯</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
