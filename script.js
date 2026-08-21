@@ -534,7 +534,11 @@ function parseCSV(text) {
             activa: (get('ACTIVA') || '').toUpperCase(),
             carpeta: get('CARPETA') || '',
             archivo: get('ARCHIVO_FOTO') || '',
-            alergenos: (() => { const a = get('ALERGENOS_COD'); return a ? a.split(',').map(x => x.trim()).filter(x => x) : []; })()
+            alergenos: (() => { const a = get('ALERGENOS_COD'); return a ? a.split(',').map(x => x.trim()).filter(x => x) : []; })(),
+            // NUEVO: posiciones (1, 2, 3...) de las palabras entre "//.../ /" del nombre que
+            // están desactivadas para este plato — p.ej. "2,5". Es la misma lista para todos
+            // los idiomas (ver processName/generateItemHtml, que la aplican por posición).
+            opcionesInactivas: (() => { const o = get('OPCIONES_INACTIVAS'); return o ? o.split(',').map(x => parseInt(x.trim(), 10)).filter(n => !isNaN(n)) : []; })()
         };
 
         Object.keys(idx).forEach(h => {
@@ -693,14 +697,38 @@ function utf8ToB64(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64ToUtf8(str) { return decodeURIComponent(escape(atob(str))); }
 
 function generateItemHtml(item, isGuarni = false) {
+    // NUEVO: además del "Nombre // Detalle" de siempre (una sola pareja de "//", usado para
+    // la uva de los vinos), ahora se admiten VARIAS palabras entre "//.../ /" seguidas — cada
+    // una es una "opción" independiente (sabor, ingrediente...) que se puede activar/desactivar
+    // por plato desde el editor (ver item.opcionesInactivas). OJO: a propósito NO se filtran
+    // los trozos vacíos del split ANTES de separar nombre/opciones — si se hiciera, un
+    // separador no vacío como " , " desplazaría la paridad par/impar y se romperían las
+    // posiciones. Los índices IMPARES del split (1, 3, 5...) son siempre las opciones; los
+    // PARES (0, 2, 4...) son el nombre y el texto de relleno entre opciones, que se descarta.
     const processName = (text) => {
-        if (!text) return { name: '', uvas: '' };
-        const parts = text.split('//').map(p => p.trim()).filter(p => p !== "");
-        return { name: parts[0] || '', uvas: parts[1] || '' };
+        if (!text) return { name: '', uvas: '', opciones: [] };
+        const parts = text.split('//');
+        const name = (parts[0] || '').trim();
+        const opciones = [];
+        for (let i = 1; i < parts.length; i += 2) {
+            const tok = (parts[i] || '').trim();
+            if (tok !== '') opciones.push(tok);
+        }
+        return { name, uvas: opciones[0] || '', opciones };
+    };
+
+    // NUEVO: texto final de la segunda línea — solo las opciones ACTIVAS (por posición
+    // 1-based, misma lista para todos los idiomas), unidas por comas.
+    const opcionesActivasTexto = (data) => {
+        if (!data.opciones || data.opciones.length === 0) return '';
+        const inactivas = item.opcionesInactivas || [];
+        return data.opciones.filter((_, idx) => !inactivas.includes(idx + 1)).join(', ');
     };
 
     const currentData = processName(item[`nombre_${currentLang.toLowerCase()}`] || item.nombre_es);
     const secondaryData = processName(item.nombre_es);
+    const currentOpcionesTexto = opcionesActivasTexto(currentData);
+    const secondaryOpcionesTexto = opcionesActivasTexto(secondaryData);
 
     // NOTA: a diferencia de Roland Garros, aquí NO se oculta el precio de la Guarnición por
     // defecto — en el documento de rangos de US Open no consta que la guarnición (5001-5099)
@@ -737,12 +765,12 @@ function generateItemHtml(item, isGuarni = false) {
         <div class="item-content" ${clickAction} ${clickableStyle}>
             <span class="name-selected">
                 ${infoPlacement}
-                ${currentData.uvas ? `<br><small style="font-size:0.85em; opacity:0.8; font-style:italic; display:block; margin-top:2px;">${currentData.uvas}</small>` : ''}
+                ${currentOpcionesTexto ? `<br><small style="font-size:0.85em; opacity:0.8; font-style:italic; display:block; margin-top:2px;">${currentOpcionesTexto}</small>` : ''}
             </span>
             ${currentLang !== 'ES' ? `
             <span class="name-secondary">
                 ${secondaryData.name}
-                ${secondaryData.uvas ? `<br><small style="font-size:0.85em; opacity:0.8; font-style:italic;">${secondaryData.uvas}</small>` : ''}
+                ${secondaryOpcionesTexto ? `<br><small style="font-size:0.85em; opacity:0.8; font-style:italic;">${secondaryOpcionesTexto}</small>` : ''}
             </span>` : ''}
             <div class="alergenos-list">${alergenosHtml}</div>
         </div>
