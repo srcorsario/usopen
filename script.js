@@ -40,7 +40,7 @@ const LIVE_CSV_ENDPOINT = 'https://script.google.com/macros/s/AKfycbypT6mBTNzHG1
 const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 // NUEVO: URL del App Script para las peticiones de sincronización del sistema (US Open)
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypT6mBTNzHG1TbpHfNIAD4yNV_6JAr3VM-nKtAuWep1FFpzpvrMQq-7K4IFUC4WdLn/exec';
-const APP_VERSION = 'v1.0.0-usopen';
+const APP_VERSION = 'v1.1.0-usopen';
 
 const IDIOMAS = {
     ES: "🇪🇸 Español", EN: "🇬🇧 English", DE: "🇩🇪 Deutsch", FR: "🇫🇷 Français", IT: "🇮🇹 Italiano",
@@ -63,6 +63,13 @@ const MENU_TEXTS = {
 };
 
 let allData = [];
+
+// NUEVO: además de pestañas completas, la hoja "Categorias" del backend también puede traer
+// dos interruptores GLOBALES para toda la web (no por sección): id "fotos" (icono 📸 de
+// galería) e id "info" (icono ℹ️ de descripción/preguntas). Se leen y guardan con el mismo
+// mecanismo que las pestañas (fetchCategoriasDeshabilitadas), solo que generateItemHtml()
+// los consulta directamente por su id fijo en vez de por pestanaId.
+let idsGlobalesDesactivados = new Set();
 let currentLang = 'ES', currentCat = 'sugerencias';
 let currentGalleryPath = '', currentPhotoIndex = 1, maxPhotosFound = 1;
 let verifiedImages = {};
@@ -384,6 +391,7 @@ async function init() {
         // (por defecto 'sugerencias', o lo que haya dejado un checkUrlHash muy tempranero)
         // apuntara justo a la que se acaba de ocultar, se cae a la primera pestaña que quede.
         const categoriasDeshabilitadas = await categoriasPromise;
+        idsGlobalesDesactivados = categoriasDeshabilitadas; // NUEVO: fotos/info conviven en el mismo Set
         if (categoriasDeshabilitadas.size > 0) {
             categoriesList = categoriesList.filter(c => !categoriasDeshabilitadas.has(c.id));
             if (!categoriesList.some(c => c.id === currentCat)) {
@@ -786,7 +794,7 @@ function generateItemHtml(item, isGuarni = false) {
     let clickAction = '';
     let clickableStyle = '';
 
-    if (item.archivo && item.archivo.includes('01.webp')) {
+    if (!idsGlobalesDesactivados.has('fotos') && item.archivo && item.archivo.includes('01.webp')) {
         const base = `imagenes/${item.carpeta}/${item.archivo.split('01.webp')[0]}`;
         photoIcon = `<span class="emoji-photo">📸</span>`;
         clickAction = `onclick="openGallery('${base}')"`;
@@ -796,7 +804,7 @@ function generateItemHtml(item, isGuarni = false) {
     let infoIconHtml = '';
     const infoKey = `info_${currentLang.toLowerCase()}`;
     const infoData = item[infoKey];
-    if (infoData && infoData.trim() !== '') {
+    if (!idsGlobalesDesactivados.has('info') && infoData && infoData.trim() !== '') {
         const b64Info = utf8ToB64(infoData);
         const infoClickHandler = `event.stopPropagation(); showInfoModal('${b64Info}')`;
         infoIconHtml = `<span class="emoji-info" onclick="${infoClickHandler}" title="Info">ℹ️</span>`;
