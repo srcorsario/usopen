@@ -72,7 +72,9 @@ let currentPreloadSession = 0;
 
 // NUEVO: cada categoría lleva su propio array `ranges` de [inicio, fin] de ID — ver nota de
 // cabecera sobre por qué ya no se puede usar "prefijo del ID" como en Roland Garros.
-const categoriesList = [
+// NUEVO (22 agosto): "let" en vez de "const" — init() reasigna esta lista tras filtrar las
+// pestañas que el Web Editor Pro haya desactivado (ver fetchCategoriasDeshabilitadas()).
+let categoriesList = [
     {
         id: 'sugerencias', ranges: [[12100, 12999]],
         ES: 'Sugerencias', EN: 'Suggestions', DE: 'Vorschläge', FR: 'Suggestions', IT: 'Suggerimenti',
@@ -328,6 +330,32 @@ const guarniTitles = {
     KO: '사이드 메뉴', CA: 'Guarnició', EU: 'Garnizioa', GL: 'Guarnición', VA: 'Guarnició'
 };
 
+// NUEVO: lee la hoja "Categorias" del backend (Código.gs, ?accion=categorias) y devuelve el
+// Set de ids de pestaña que están desactivadas (activa=NO). Si algo falla (red, endpoint aún
+// no actualizado, etc.) devuelve un Set vacío — es decir, se muestran TODAS las pestañas, el
+// mismo comportamiento de siempre. Nunca debe poder romper la carga del menú.
+async function fetchCategoriasDeshabilitadas() {
+    try {
+        const url = `${LIVE_CSV_ENDPOINT}?accion=categorias&zx=${Date.now()}`;
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const text = await response.text();
+        const filas = text.split(/\r?\n/).filter(f => f.trim() !== '');
+        const deshabilitadas = new Set();
+        filas.forEach((f, i) => {
+            if (i === 0) return; // cabecera "ID,Activa"
+            const c = f.split(',');
+            const id = (c[0] || '').trim();
+            const activa = (c[1] || '').trim().toUpperCase();
+            if (id && activa === 'NO') deshabilitadas.add(id);
+        });
+        return deshabilitadas;
+    } catch (e) {
+        console.warn('[Pestañas] No se pudo comprobar qué secciones están desactivadas, se muestran todas:', e.message);
+        return new Set();
+    }
+}
+
 async function init() {
     try {
         injectVisualIndicatorStyles();
@@ -338,6 +366,10 @@ async function init() {
 
         const idiomasEtapa1 = Array.from(new Set([currentLang, 'ES']));
 
+        // NUEVO: se pide en paralelo con la carga de platos (no depende de ella) para no
+        // añadir latencia al primer render.
+        const categoriasPromise = fetchCategoriasDeshabilitadas();
+
         try {
             allData = await fetchAndParseCsv(idiomasEtapa1);
         } catch (e) {
@@ -345,6 +377,18 @@ async function init() {
             const response = await fetch(CSV_URL);
             const csvText = await response.text();
             allData = parseCSV(csvText);
+        }
+
+        // NUEVO: aplicar las pestañas desactivadas ANTES del primer renderCategories(), para
+        // que el botón de una pestaña oculta no llegue a pintarse ni un instante. Si currentCat
+        // (por defecto 'sugerencias', o lo que haya dejado un checkUrlHash muy tempranero)
+        // apuntara justo a la que se acaba de ocultar, se cae a la primera pestaña que quede.
+        const categoriasDeshabilitadas = await categoriasPromise;
+        if (categoriasDeshabilitadas.size > 0) {
+            categoriesList = categoriesList.filter(c => !categoriasDeshabilitadas.has(c.id));
+            if (!categoriesList.some(c => c.id === currentCat)) {
+                currentCat = categoriesList.length > 0 ? categoriesList[0].id : currentCat;
+            }
         }
 
         if (allData.length > 0) {
