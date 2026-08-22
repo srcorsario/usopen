@@ -33,13 +33,13 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSOWewZgqWZEFYi
 // Apps Script desplegado en esta URL debe tener la versión de Código.gs con LockService y el
 // endpoint ?accion=csv (la que se ha preparado en Codigo_gs_US_OPEN.gs) — la versión que
 // había desplegada antes en US Open era distinta/antigua y NO soporta esta carga por etapas.
-const LIVE_CSV_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwpeg72_mQqbHgR9TkBTieTEeo6qC2NO80-_YLUuRHG7Z2KUhcJkcgBXJz49TveTWfD/exec';
+const LIVE_CSV_ENDPOINT = 'https://script.google.com/macros/s/AKfycbypT6mBTNzHG1TbpHfNIAD4yNV_6JAr3VM-nKtAuWep1FFpzpvrMQq-7K4IFUC4WdLn/exec';
 // NUEVO: idiomas que se precargan en segundo plano justo después del primer render (además
 // del idioma del cliente, que siempre va primero). El resto de los 26 solo se piden bajo
 // demanda, cuando alguien los elige en el selector "Más...".
 const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 // NUEVO: URL del App Script para las peticiones de sincronización del sistema (US Open)
-const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwpeg72_mQqbHgR9TkBTieTEeo6qC2NO80-_YLUuRHG7Z2KUhcJkcgBXJz49TveTWfD/exec';
+const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypT6mBTNzHG1TbpHfNIAD4yNV_6JAr3VM-nKtAuWep1FFpzpvrMQq-7K4IFUC4WdLn/exec';
 const APP_VERSION = 'v1.0.0-usopen';
 
 const IDIOMAS = {
