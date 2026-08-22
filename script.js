@@ -40,7 +40,7 @@ const LIVE_CSV_ENDPOINT = 'https://script.google.com/macros/s/AKfycbypT6mBTNzHG1
 const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 // NUEVO: URL del App Script para las peticiones de sincronización del sistema (US Open)
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypT6mBTNzHG1TbpHfNIAD4yNV_6JAr3VM-nKtAuWep1FFpzpvrMQq-7K4IFUC4WdLn/exec';
-const APP_VERSION = 'v1.2.0-usopen';
+const APP_VERSION = 'v1.3.0-usopen';
 
 const IDIOMAS = {
     ES: "🇪🇸 Español", EN: "🇬🇧 English", DE: "🇩🇪 Deutsch", FR: "🇫🇷 Français", IT: "🇮🇹 Italiano",
@@ -386,19 +386,14 @@ async function init() {
             allData = parseCSV(csvText);
         }
 
-        // NUEVO: aplicar las pestañas desactivadas ANTES del primer renderCategories(), para
-        // que el botón de una pestaña oculta no llegue a pintarse ni un instante. Si currentCat
-        // (por defecto 'sugerencias', o lo que haya dejado un checkUrlHash muy tempranero)
-        // apuntara justo a la que se acaba de ocultar, se cae a la primera pestaña que quede.
-        const categoriasDeshabilitadas = await categoriasPromise;
-        idsGlobalesDesactivados = categoriasDeshabilitadas; // NUEVO: fotos/info conviven en el mismo Set
-        if (categoriasDeshabilitadas.size > 0) {
-            categoriesList = categoriesList.filter(c => !categoriasDeshabilitadas.has(c.id));
-            if (!categoriesList.some(c => c.id === currentCat)) {
-                currentCat = categoriesList.length > 0 ? categoriesList[0].id : currentCat;
-            }
-        }
-
+        // MODIFICADO (22 agosto, velocidad de apertura): antes se esperaba SIEMPRE a "categorias"
+        // además del CSV antes de pintar nada — dos peticiones independientes a Apps Script, así
+        // que si "categorias" tardaba más que el CSV (nada lo garantiza, aunque en la práctica
+        // suele ser la más rápida de las dos), retrasaba el primer pintado sin necesidad. Ahora
+        // se pinta en cuanto llega el CSV, con el supuesto por defecto de que nada está oculto
+        // (que es el caso normal — "una pestaña ausente de la hoja se considera ACTIVA por
+        // defecto"); si "categorias" resuelve después y de verdad hay algo desactivado, se repinta
+        // solo entonces (repintado gratis en el caso normal, porque no hay nada que ocultar).
         if (allData.length > 0) {
             renderCategories();
             renderMenu();
@@ -406,6 +401,19 @@ async function init() {
             managePreload();
             setupScrollListener();
         }
+
+        categoriasPromise.then(categoriasDeshabilitadas => {
+            idsGlobalesDesactivados = categoriasDeshabilitadas; // fotos/info conviven en el mismo Set
+            if (categoriasDeshabilitadas.size === 0) return;
+            categoriesList = categoriesList.filter(c => !categoriasDeshabilitadas.has(c.id));
+            if (!categoriesList.some(c => c.id === currentCat)) {
+                currentCat = categoriesList.length > 0 ? categoriesList[0].id : currentCat;
+            }
+            if (allData.length > 0) {
+                renderCategories();
+                renderMenu();
+            }
+        }).catch(e => console.warn('[Pestañas] No se pudo aplicar el estado de categorías:', e.message));
 
         const idiomasPendientesEsenciales = ESSENTIAL_LANGS.filter(l => !idiomasEtapa1.includes(l));
         const etapa2 = idiomasPendientesEsenciales.length > 0
