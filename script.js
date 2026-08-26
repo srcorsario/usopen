@@ -33,7 +33,7 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSOWewZgqWZEFYi
 // Apps Script desplegado en esta URL debe tener la versión de Código.gs con LockService y el
 // endpoint ?accion=csv (la que se ha preparado en Codigo_gs_US_OPEN.gs) — la versión que
 // había desplegada antes en US Open era distinta/antigua y NO soporta esta carga por etapas.
-const LIVE_CSV_ENDPOINT = 'https://script.google.com/macros/s/AKfycbypT6mBTNzHG1TbpHfNIAD4yNV_6JAr3VM-nKtAuWep1FFpzpvrMQq-7K4IFUC4WdLn/exec';
+const LIVE_CSV_ENDPOINT = 'https://script.google.com/macros/s/AKfycby4d3AzkjnVhy7k9H4ydOO_b909R9VuOgCvpmVOMNR8R60xEQSYEY5jT5L2FrLqZ8gd/exec';
 // NUEVO: idiomas que se precargan en segundo plano justo después del primer render (además
 // del idioma del cliente, que siempre va primero). El resto de los 26 solo se piden bajo
 // demanda, cuando alguien los elige en el selector "Más...".
@@ -44,8 +44,16 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 // justificación izquierda como el resto de idiomas — ver updateLanguageUI().
 const RTL_LANGS = ['AR'];
 // NUEVO: URL del App Script para las peticiones de sincronización del sistema (US Open)
-const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypT6mBTNzHG1TbpHfNIAD4yNV_6JAr3VM-nKtAuWep1FFpzpvrMQq-7K4IFUC4WdLn/exec';
+const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4d3AzkjnVhy7k9H4ydOO_b909R9VuOgCvpmVOMNR8R60xEQSYEY5jT5L2FrLqZ8gd/exec';
 const APP_VERSION = 'v1.3.0-usopen';
+// NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
+// última copia conocida de allData (más un sello de versión de la app) para poder pintar la
+// web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
+// guardarCacheLocal / sincronizarConCache. Lleva "V1" a propósito: si el formato de los datos
+// cambia en el futuro de forma incompatible, basta con subir a "V2" para que las cachés viejas
+// se ignoren solas (leerCacheLocal ya compara appVersion, pero esto cubre además cambios de
+// forma dentro de la misma versión visible de la app).
+const MENU_CACHE_KEY = 'usopenMenuCacheV1';
 
 const IDIOMAS = {
     ES: "🇪🇸 Español", EN: "🇬🇧 English", DE: "🇩🇪 Deutsch", FR: "🇫🇷 Français", IT: "🇮🇹 Italiano",
@@ -376,11 +384,51 @@ async function init() {
         const userLang = (navigator.language || navigator.userLanguage).split('-')[0].toUpperCase();
         currentLang = IDIOMAS[userLang] ? userLang : 'EN';
 
-        const idiomasEtapa1 = Array.from(new Set([currentLang, 'ES']));
-
         // NUEVO: se pide en paralelo con la carga de platos (no depende de ella) para no
         // añadir latencia al primer render.
         const categoriasPromise = fetchCategoriasDeshabilitadas();
+
+        // NUEVO (26 agosto, caché local + delta por hash): si este navegador ya tiene una copia
+        // guardada de una visita anterior (y de esta misma versión de la app), se pinta con ella
+        // AL INSTANTE — cero fetches antes del primer render — y la comprobación de qué ha
+        // cambiado de verdad desde entonces se hace después, en segundo plano (ver
+        // sincronizarConCache). Si no hay caché (primera visita en este navegador, se borró, o
+        // es de una versión de la app distinta), se cae al flujo de siempre por etapas.
+        const cache = leerCacheLocal();
+        if (cache) {
+            allData = cache.data;
+            renderCategories();
+            renderMenu();
+            updateLanguageUI();
+            managePreload();
+            setupScrollListener();
+
+            categoriasPromise.then(categoriasDeshabilitadas => {
+                idsGlobalesDesactivados = categoriasDeshabilitadas;
+                if (categoriasDeshabilitadas.size === 0) return;
+                categoriesList = categoriesList.filter(c => !categoriasDeshabilitadas.has(c.id));
+                if (!categoriesList.some(c => c.id === currentCat)) {
+                    currentCat = categoriesList.length > 0 ? categoriesList[0].id : currentCat;
+                }
+                renderCategories();
+                renderMenu();
+            }).catch(e => console.warn('[Pestañas] No se pudo aplicar el estado de categorías:', e.message));
+
+            // NUEVO: si el idioma del navegador cambió desde la última visita y no estaba entre
+            // los ya cacheados, se pide igual que siempre bajo demanda (independiente de la
+            // comprobación general de cambios, para no retrasarlo).
+            if (!isLangLoaded(currentLang)) {
+                fetchAndParseCsv([currentLang])
+                    .then(items => { mergeIntoAllData(items); renderCategories(); renderMenu(); updateLanguageUI(); guardarCacheLocal(); })
+                    .catch(e => console.warn('[Caché local] No se pudo precargar el idioma del cliente:', e.message));
+            }
+
+            sincronizarConCache(cache.data)
+                .catch(e => console.warn('[Caché local] Fallo comprobando cambios en segundo plano:', e.message));
+            return;
+        }
+
+        const idiomasEtapa1 = Array.from(new Set([currentLang, 'ES']));
 
         try {
             allData = await fetchAndParseCsv(idiomasEtapa1);
@@ -405,6 +453,11 @@ async function init() {
             updateLanguageUI();
             managePreload();
             setupScrollListener();
+            // NUEVO (26 agosto): se guarda ya lo que tenemos (idioma cliente + ES) por si el
+            // usuario cierra la pestaña antes de que terminen las etapas 2/3 — así la próxima
+            // visita ya parte de algo cacheado en vez de ir de cero. Se vuelve a guardar (con más
+            // idiomas) al terminar cada etapa siguiente.
+            guardarCacheLocal();
         }
 
         categoriasPromise.then(categoriasDeshabilitadas => {
@@ -422,7 +475,7 @@ async function init() {
 
         const idiomasPendientesEsenciales = ESSENTIAL_LANGS.filter(l => !idiomasEtapa1.includes(l));
         const etapa2 = idiomasPendientesEsenciales.length > 0
-            ? fetchAndParseCsv(idiomasPendientesEsenciales).then(items => mergeIntoAllData(items)).catch(e => console.warn('[Carga por etapas] No se pudieron precargar los idiomas esenciales restantes:', e.message))
+            ? fetchAndParseCsv(idiomasPendientesEsenciales).then(items => { mergeIntoAllData(items); guardarCacheLocal(); }).catch(e => console.warn('[Carga por etapas] No se pudieron precargar los idiomas esenciales restantes:', e.message))
             : Promise.resolve();
 
         etapa2.then(() => {
@@ -432,7 +485,7 @@ async function init() {
             const idiomasRestantes = Object.keys(IDIOMAS).filter(l => !idiomasEtapa1.includes(l) && !ESSENTIAL_LANGS.includes(l));
             if (idiomasRestantes.length === 0) return;
             fetchAndParseCsv(idiomasRestantes)
-                .then(items => mergeIntoAllData(items))
+                .then(items => { mergeIntoAllData(items); guardarCacheLocal(); })
                 .catch(e => console.warn('[Carga por etapas] No se pudo precargar el resto de idiomas:', e.message));
         });
     } catch (e) { console.error("Error en la inicialización:", e); }
@@ -611,7 +664,14 @@ function parseCSV(text) {
             // NUEVO: posiciones (1, 2, 3...) de las palabras entre "//.../ /" del nombre que
             // están desactivadas para este plato — p.ej. "2,5". Es la misma lista para todos
             // los idiomas (ver processName/generateItemHtml, que la aplican por posición).
-            opcionesInactivas: (() => { const o = get('OPCIONES_INACTIVAS'); return o ? o.split(',').map(x => parseInt(x.trim(), 10)).filter(n => !isNaN(n)) : []; })()
+            opcionesInactivas: (() => { const o = get('OPCIONES_INACTIVAS'); return o ? o.split(',').map(x => parseInt(x.trim(), 10)).filter(n => !isNaN(n)) : []; })(),
+            // NUEVO (26 agosto, caché local + delta por hash): hash de la fila calculado por el
+            // servidor (ver Código.gs > calcularHashFila). Permite comparar "¿ha cambiado este
+            // plato desde mi última visita?" sin descargar su contenido completo — ver
+            // sincronizarConCache/diffHashes. '' si el servidor todavía no sirve esta columna
+            // (versión antigua de Código.gs sin desplegar) o si esta respuesta concreta no la
+            // incluye.
+            hash: get('HASH_FILA') || ''
         };
 
         Object.keys(idx).forEach(h => {
@@ -636,15 +696,22 @@ async function fetchAndParseCsv(langs) {
     return parseCSV(text);
 }
 
+// MODIFICADO (26 agosto, caché local + delta por hash): antes solo se pisaban las claves
+// nombre_*/info_* (pensado para cuando cada lote descargado era SIEMPRE un idioma nuevo, nunca
+// contenido ya visto). Ahora que también se usa para aplicar filas cambiadas (precio, activa,
+// alérgenos, hash...) tras la comprobación de cambios en segundo plano, se pisa CUALQUIER clave
+// que venga en el lote — precio/activa/carpeta/archivo/alergenos/opcionesInactivas/hash
+// incluidos. Esto no cambia el comportamiento de las etapas 1/2/3 ni de changeLanguage(): un
+// lote pedido solo con &idiomas= sigue trayendo las columnas base (Código.gs las incluye
+// siempre, ver COLUMNAS_BASE), así que overwrite total. Sigue añadiendo el item entero si el id
+// es nuevo (plato/vino recién creado en la hoja).
 function mergeIntoAllData(newItems) {
     const byId = {};
     allData.forEach(it => { byId[it.id] = it; });
     newItems.forEach(ni => {
         const existente = byId[ni.id];
         if (existente) {
-            Object.keys(ni).forEach(k => {
-                if (k.startsWith('nombre_') || k.startsWith('info_')) existente[k] = ni[k];
-            });
+            Object.keys(ni).forEach(k => { existente[k] = ni[k]; });
         } else {
             allData.push(ni);
             byId[ni.id] = ni;
@@ -655,6 +722,127 @@ function mergeIntoAllData(newItems) {
 function isLangLoaded(lang) {
     if (allData.length === 0) return false;
     return allData[0][`nombre_${lang.toLowerCase()}`] !== undefined;
+}
+
+// =========================================================================================
+// NUEVO (26 agosto): caché local (localStorage) + sincronización por hash. Objetivo: en una
+// visita recurrente desde el mismo navegador, pintar la carta al instante con la última copia
+// conocida (sin esperar ningún fetch) y comprobar en segundo plano qué ha cambiado de verdad
+// desde entonces, descargando solo eso — en vez de repetir siempre la carga completa por
+// etapas. Si algo falla en cualquier punto de este bloque (localStorage bloqueado/lleno, red,
+// servidor con Código.gs aún sin actualizar...) se degrada solo, sin romper la carga normal:
+// ver los try/catch y los "return null"/early-return de cada función.
+// =========================================================================================
+
+// Lee la caché guardada en este navegador. Devuelve null si no existe, está corrupta, o es de
+// una versión de la app distinta a la que se está ejecutando ahora (para que un cambio futuro
+// en la forma de los datos no se quede pisado con un objeto de forma antigua).
+function leerCacheLocal() {
+    try {
+        const raw = localStorage.getItem(MENU_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.data) || parsed.data.length === 0) return null;
+        if (parsed.appVersion !== APP_VERSION) return null;
+        return parsed;
+    } catch (e) {
+        console.warn('[Caché local] No se pudo leer la caché, se ignora:', e.message);
+        return null;
+    }
+}
+
+// Guarda el estado actual de allData en localStorage. Se llama varias veces a lo largo de la
+// carga (tras el primer pintado, tras cada etapa) para que incluso si el usuario cierra la
+// pestaña antes de que termine todo, la próxima visita ya parta de algo en vez de ir de cero.
+function guardarCacheLocal() {
+    try {
+        localStorage.setItem(MENU_CACHE_KEY, JSON.stringify({
+            data: allData,
+            ts: Date.now(),
+            appVersion: APP_VERSION
+        }));
+    } catch (e) {
+        console.warn('[Caché local] No se pudo guardar la caché (¿localStorage lleno o bloqueado?):', e.message);
+    }
+}
+
+// Pide SOLO las columnas base (incluida HASH_FILA) de todas las filas — una petición de unos
+// pocos KB pensada únicamente para comprobar qué ha cambiado, no para renderizar nada con ella
+// directamente (los nombre_*/info_* de estas filas vendrán "undefined", como espera parseCSV).
+async function fetchHashesBase() {
+    const url = `${LIVE_CSV_ENDPOINT}?accion=csv&soloBase=1&zx=${Date.now()}`;
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const text = await response.text();
+    return parseCSV(text);
+}
+
+// Pide el contenido completo (columnas base + los idiomas indicados) de solo las filas cuyo ID
+// esté en la lista — para traer SOLO lo que ha cambiado, tras compararlo con fetchHashesBase.
+async function fetchFilasPorId(ids, langs) {
+    if (!ids || ids.length === 0) return [];
+    const idiomasParam = langs.join(',');
+    const idsParam = ids.join(',');
+    const url = `${LIVE_CSV_ENDPOINT}?accion=csv&idiomas=${encodeURIComponent(idiomasParam)}&ids=${encodeURIComponent(idsParam)}&zx=${Date.now()}`;
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const text = await response.text();
+    return parseCSV(text);
+}
+
+// Qué idiomas tiene ya cargados (nombre_xx presente, aunque sea vacío) un conjunto de datos
+// dado — se usa para saber qué idiomas pedir de las filas que han cambiado, sin perder ninguno
+// de los que este navegador ya tenía descargados antes de la comprobación.
+function detectarIdiomasEnData(data) {
+    if (!data || data.length === 0) return [];
+    const langs = new Set();
+    Object.keys(data[0]).forEach(k => {
+        if (k.startsWith('nombre_')) langs.add(k.replace('nombre_', '').toUpperCase());
+    });
+    return Array.from(langs);
+}
+
+// Compara la caché guardada contra las filas base recién descargadas (por hash) y devuelve qué
+// IDs han cambiado (nuevo o hash distinto) y qué IDs de la caché ya no existen en la hoja.
+function diffHashes(cachedData, freshBaseRows) {
+    const cachedById = {};
+    cachedData.forEach(it => { cachedById[it.id] = it; });
+    const freshIds = new Set();
+    const changedIds = [];
+    freshBaseRows.forEach(row => {
+        freshIds.add(row.id);
+        const cached = cachedById[row.id];
+        if (!cached || cached.hash !== row.hash) changedIds.push(row.id);
+    });
+    const deletedIds = cachedData.filter(it => !freshIds.has(it.id)).map(it => it.id);
+    return { changedIds, deletedIds };
+}
+
+// Comprobación en segundo plano tras un arranque "en caliente" (pintado desde caché): pide solo
+// los hashes, calcula qué ha cambiado/desaparecido desde la copia guardada, y solo si hay algo
+// distinto descarga el contenido completo de esas filas concretas (en los idiomas que este
+// navegador ya tenía cargados) y repinta. Si no hay ningún cambio, no se descarga ni se repinta
+// nada más — la visita ya se sirvió entera desde la caché.
+async function sincronizarConCache(cachedData) {
+    const freshBaseRows = await fetchHashesBase();
+    const { changedIds, deletedIds } = diffHashes(cachedData, freshBaseRows);
+
+    if (changedIds.length === 0 && deletedIds.length === 0) return;
+
+    if (deletedIds.length > 0) {
+        const deletedSet = new Set(deletedIds.map(String));
+        allData = allData.filter(it => !deletedSet.has(String(it.id)));
+    }
+
+    if (changedIds.length > 0) {
+        const idiomasNecesarios = Array.from(new Set([currentLang, ...detectarIdiomasEnData(cachedData)]));
+        const filasActualizadas = await fetchFilasPorId(changedIds, idiomasNecesarios);
+        mergeIntoAllData(filasActualizadas);
+    }
+
+    renderCategories();
+    renderMenu();
+    guardarCacheLocal();
 }
 
 // REESCRITO respecto a Roland Garros: aquí un plato pertenece a una pestaña si su ID cae
