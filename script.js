@@ -75,6 +75,18 @@ const MENU_TEXTS = {
     KO: "메뉴", CA: "Menú", EU: "Menu", GL: "Menú", VA: "Menú"
 };
 
+// NUEVO (26 agosto): texto "Cargando..." traducido, para el indicador visual que aparece al
+// pulsar un idioma que todavía no está descargado (ver changeLanguage). Se muestra en el
+// idioma que se está PIDIENDO, no en el idioma actual — así alguien que pulsa "DE" ve
+// "Wird geladen...", no "Cargando...".
+const LOADING_TEXTS = {
+    ES: "Cargando...", EN: "Loading...", DE: "Wird geladen...", FR: "Chargement...", IT: "Caricamento...",
+    RU: "Загрузка...", NL: "Laden...", PL: "Ładowanie...", SV: "Laddar...", NO: "Laster...",
+    DA: "Indlæser...", FI: "Ladataan...", PT: "A carregar...", RO: "Se încarcă...", HU: "Betöltés...",
+    CS: "Načítání...", EL: "Φόρτωση...", TR: "Yükleniyor...", AR: "جارٍ التحميل...", ZH: "加载中...", JA: "読み込み中...",
+    KO: "로딩 중...", CA: "Carregant...", EU: "Kargatzen...", GL: "Cargando...", VA: "Carregant..."
+};
+
 let allData = [];
 
 // NUEVO: además de pestañas completas, la hoja "Categorias" del backend también puede traer
@@ -548,6 +560,40 @@ function injectVisualIndicatorStyles() {
             background: linear-gradient(to right, rgba(255,255,255,0), rgba(255, 255, 255, 0.95));
             pointer-events: none;
             z-index: 5;
+        }
+        /* NUEVO (26 agosto): indicador visual de "cargando idioma" — ver changeLanguage(). El
+           anillo usa currentColor en el trazo superior para heredar automáticamente el color de
+           texto del elemento donde se inserta (botón activo/inactivo, píldora...), sin tener que
+           declarar colores propios que pudieran desentonar con el tema de cada web. */
+        .lang-spinner {
+            display: inline-block;
+            width: 11px;
+            height: 11px;
+            margin-right: 6px;
+            border: 2px solid rgba(128, 128, 128, 0.35);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            vertical-align: -1px;
+            animation: lang-spin 0.7s linear infinite;
+        }
+        @keyframes lang-spin {
+            to { transform: rotate(360deg); }
+        }
+        #language-selector button:disabled,
+        #more-langs:disabled {
+            opacity: 0.65;
+            cursor: default;
+        }
+        .lang-loading-pill {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 8px;
+            padding: 3px 10px;
+            font-size: 0.8em;
+            border-radius: 999px;
+            background: rgba(128, 128, 128, 0.15);
+            white-space: nowrap;
+            vertical-align: middle;
         }
     `;
     document.head.appendChild(style);
@@ -1190,21 +1236,69 @@ function closeInfoModal() {
     if (modal) modal.style.display = 'none';
 }
 
+// NUEVO (26 agosto): tiempo mínimo que se mantiene visible el indicador de "cargando idioma",
+// aunque la respuesta llegue antes — para que en una red muy rápida no aparezca y desaparezca
+// en un parpadeo casi imperceptible (peor sensación que no ponerlo, da la impresión de un tic).
+const MIN_LOADING_VISIBLE_MS = 200;
+
+// MODIFICADO (26 agosto): si el idioma elegido no es de los ya cargados (idioma del cliente, ES,
+// o los esenciales), se pide bajo demanda al endpoint en vivo antes de renderizar. Antes, durante
+// esa espera (los 1,5-3s típicos de latencia de Apps Script) no había NINGÚN cambio visible en
+// los botones de idioma — solo se desactivaba el <select> de "Más...", así que pulsar un idioma
+// del selector fijo (ES/EN/DE/FR/IT) podía dar la sensación de que el botón no había respondido.
+// Ahora se muestra un anillo girando + el texto "cargando" traducido AL IDIOMA QUE SE PIDE (no al
+// actual): si el idioma tiene botón fijo, el indicador sustituye el propio texto del botón; si
+// viene del selector "Más...", se muestra como una pequeña píldora justo al lado (un <select>
+// nativo no admite HTML dentro de sus opciones). Se bloquean todos los controles de idioma
+// mientras dura la carga, para evitar dos peticiones solapadas si se pulsa dos veces seguidas.
 async function changeLanguage(l) {
     if (!l) return;
 
     if (!isLangLoaded(l)) {
         const select = document.getElementById('more-langs');
+        const btnEl = document.getElementById(`btn-${l}`);
+        const textoCarga = LOADING_TEXTS[l] || LOADING_TEXTS['EN'];
+        const spinnerHtml = `<span class="lang-spinner" aria-hidden="true"></span>${textoCarga}`;
+
+        const originalBtnHtml = btnEl ? btnEl.innerHTML : null;
+        let pillEl = null;
+
+        document.querySelectorAll('#language-selector button').forEach(b => { b.disabled = true; });
         if (select) select.disabled = true;
+
+        if (btnEl) {
+            btnEl.innerHTML = spinnerHtml;
+        } else if (select) {
+            pillEl = document.createElement('span');
+            pillEl.className = 'lang-loading-pill';
+            pillEl.innerHTML = spinnerHtml;
+            select.insertAdjacentElement('afterend', pillEl);
+        }
+
+        const inicioCarga = Date.now();
+        let errorCarga = null;
         try {
             const nuevosItems = await fetchAndParseCsv([l]);
             mergeIntoAllData(nuevosItems);
         } catch (e) {
-            console.error('Error cargando idioma bajo demanda:', e);
-            if (select) select.disabled = false;
-            return;
+            errorCarga = e;
         }
+
+        // NUEVO: fuerza el tiempo mínimo visible antes de quitar el indicador.
+        const transcurrido = Date.now() - inicioCarga;
+        if (transcurrido < MIN_LOADING_VISIBLE_MS) {
+            await new Promise(r => setTimeout(r, MIN_LOADING_VISIBLE_MS - transcurrido));
+        }
+
+        if (btnEl && originalBtnHtml !== null) btnEl.innerHTML = originalBtnHtml;
+        if (pillEl) pillEl.remove();
+        document.querySelectorAll('#language-selector button').forEach(b => { b.disabled = false; });
         if (select) select.disabled = false;
+
+        if (errorCarga) {
+            console.error('Error cargando idioma bajo demanda:', errorCarga.message);
+            return; // se queda en el idioma anterior si falla la descarga
+        }
     }
 
     currentLang = l;
