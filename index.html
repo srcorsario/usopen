@@ -70,6 +70,13 @@
         <button id="next-btn" class="nav-btn" onclick="changePhoto(1); event.stopPropagation();">❯</button>
     </div>
 
-    <script src="script.js"></script>
+    <!-- NUEVO (26 agosto): ?v= de cache-busting en script.js — sin esto, el navegador (sobre
+         todo en móvil) puede seguir sirviendo una copia antigua cacheada de script.js aunque el
+         archivo en GitHub ya sea el nuevo, igual que ya pasaba con la imagen del vino "El
+         Tenista" antes de que se le añadiera su propio ?v=. IMPORTANTE: cada vez que se suba un
+         script.js nuevo, hay que subir también este número (basta con que cambie, no hace falta
+         que coincida con APP_VERSION de dentro del script) — si no, esta protección no sirve de
+         nada porque el navegador seguirá viendo la misma URL de siempre. -->
+    <script src="script.js?v=1.4.0-usopen"></script>
 </body>
 </html>

@@ -45,7 +45,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: URL del App Script para las peticiones de sincronización del sistema (US Open)
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4d3AzkjnVhy7k9H4ydOO_b909R9VuOgCvpmVOMNR8R60xEQSYEY5jT5L2FrLqZ8gd/exec';
-const APP_VERSION = 'v1.3.0-usopen';
+const APP_VERSION = 'v1.4.0-usopen';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
