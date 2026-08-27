@@ -566,13 +566,13 @@ function injectVisualIndicatorStyles() {
             right: 25px;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 24px;
+            font-size: 28px;
             pointer-events: none;
             z-index: 100;
             opacity: 0.85;
             background: rgba(255,255,255,0.9);
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -584,17 +584,24 @@ function injectVisualIndicatorStyles() {
         @keyframes swipeHand {
             0% { transform: translateY(-50%) translateX(10px); opacity: 0; }
             30% { opacity: 0.9; }
-            70% { transform: translateY(-50%) translateX(-35px); opacity: 0.9; }
-            100% { transform: translateY(-50%) translateX(-45px); opacity: 0; }
+            70% { transform: translateY(-50%) translateX(-55px); opacity: 0.9; }
+            100% { transform: translateY(-50%) translateX(-65px); opacity: 0; }
         }
+        /* MODIFICADO (27 agosto, visibilidad de "hay más categorías"): el degradado blanco del
+           borde bajaba de 45px a opacidad casi total (0.95) — eso tapaba justo la porción del
+           siguiente botón que ya asoma de forma natural por el borde del contenedor (el propio
+           recorte del overflow, sin necesitar JS), que es la pista más clara y universal de "esto
+           continúa". Se deja mucho más estrecho y suave para que ese trocito de botón se siga
+           viendo, y el borde no quede "borrado" en blanco.
+        */
         .nav-container-interactive::after {
             content: '';
             position: absolute;
             top: 0;
             right: 0;
-            width: 45px;
+            width: 18px;
             height: 100%;
-            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255, 255, 255, 0.95));
+            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255, 255, 255, 0.55));
             pointer-events: none;
             z-index: 5;
         }
