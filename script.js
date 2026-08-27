@@ -396,9 +396,31 @@ async function init() {
         const userLang = (navigator.language || navigator.userLanguage).split('-')[0].toUpperCase();
         currentLang = IDIOMAS[userLang] ? userLang : 'EN';
 
+        // Copia SIN filtrar de categoriesList — se usa como base cada vez que se aplica un
+        // estado de pestañas desactivadas, para poder tanto ocultar como volver a mostrar una
+        // categoría según el estado más reciente (filtrar en el sitio sería irreversible: una
+        // vez quitada una categoría no habría forma de "recuperarla" si luego resulta que sigue
+        // activa de verdad).
+        const categoriesListOriginal = categoriesList.slice();
+
         // NUEVO: se pide en paralelo con la carga de platos (no depende de ella) para no
         // añadir latencia al primer render.
         const categoriasPromise = fetchCategoriasDeshabilitadas();
+
+        // NUEVO (27 agosto, recordar último estado de toggles): antes de saber la respuesta real
+        // del servidor (puede tardar de 1,5 a varios segundos), se aplica el último estado
+        // CONFIRMADO en una visita anterior si lo hay — así el primer pintado ya acierta, sin
+        // fotos/info/pestañas que en realidad llevan tiempo desactivadas apareciendo un instante
+        // y desapareciendo después. Si no hay nada guardado (primera visita, o se borró), se
+        // sigue asumiendo "todo activo" como hasta ahora.
+        const togglesConocidos = leerTogglesCacheLocal();
+        if (togglesConocidos) {
+            idsGlobalesDesactivados = togglesConocidos;
+            categoriesList = categoriesListOriginal.filter(c => !togglesConocidos.has(c.id));
+            if (!categoriesList.some(c => c.id === currentCat)) {
+                currentCat = categoriesList.length > 0 ? categoriesList[0].id : currentCat;
+            }
+        }
 
         // NUEVO (26 agosto, caché local + delta por hash): si este navegador ya tiene una copia
         // guardada de una visita anterior (y de esta misma versión de la app), se pinta con ella
@@ -416,16 +438,21 @@ async function init() {
             setupScrollListener();
 
             categoriasPromise.then(categoriasDeshabilitadas => {
+                // Se guarda SIEMPRE el estado real confirmado, para que la próxima visita ya
+                // parta de él (ver leerTogglesCacheLocal más arriba).
+                guardarTogglesCacheLocal(categoriasDeshabilitadas);
+                // Si coincide con lo que ya se había aplicado (desde la caché de toggles, o
+                // porque no había ninguna y "todo activo" resultó ser correcto), no hay nada que
+                // corregir ni que repintar — este es ahora el caso normal en visitas repetidas.
+                if (idsIguales(categoriasDeshabilitadas, idsGlobalesDesactivados)) return;
+
                 idsGlobalesDesactivados = categoriasDeshabilitadas;
-                // NUEVO (27 agosto): la primera managePreload() (línea de arriba) se lanzó antes
-                // de saber si "Fotos" estaba desactivada, así que pudo haber empezado a precargar
-                // sin necesidad. Ahora que ya se sabe, se vuelve a llamar para que corte esa
-                // precarga en curso (currentPreloadSession la invalida) si el toggle está activo.
-                if (categoriasDeshabilitadas.has('fotos')) {
-                    managePreload();
-                }
-                if (categoriasDeshabilitadas.size === 0) return;
-                categoriesList = categoriesList.filter(c => !categoriasDeshabilitadas.has(c.id));
+                // La managePreload() de más arriba pudo haberse lanzado con un estado de "Fotos"
+                // desactualizado; ahora que se confirma el real, se relanza para que cargue o
+                // corte lo que corresponda (currentPreloadSession invalida la anterior si hacía
+                // falta cortarla).
+                managePreload();
+                categoriesList = categoriesListOriginal.filter(c => !categoriasDeshabilitadas.has(c.id));
                 if (!categoriesList.some(c => c.id === currentCat)) {
                     currentCat = categoriesList.length > 0 ? categoriesList[0].id : currentCat;
                 }
@@ -480,19 +507,16 @@ async function init() {
         }
 
         categoriasPromise.then(categoriasDeshabilitadas => {
+            guardarTogglesCacheLocal(categoriasDeshabilitadas);
+            if (idsIguales(categoriasDeshabilitadas, idsGlobalesDesactivados)) return;
+
             idsGlobalesDesactivados = categoriasDeshabilitadas; // fotos/info conviven en el mismo Set
-            // NUEVO (27 agosto): igual que en la rama de caché — la managePreload() de más arriba
-            // se lanzó sin saber aún si "Fotos" estaba desactivada; si resulta que sí, se vuelve a
-            // llamar para cortar la precarga que ya pudiera estar en curso.
-            if (categoriasDeshabilitadas.has('fotos')) {
-                managePreload();
-            }
-            if (categoriasDeshabilitadas.size === 0) return;
-            categoriesList = categoriesList.filter(c => !categoriasDeshabilitadas.has(c.id));
+            categoriesList = categoriesListOriginal.filter(c => !categoriasDeshabilitadas.has(c.id));
             if (!categoriesList.some(c => c.id === currentCat)) {
                 currentCat = categoriesList.length > 0 ? categoriesList[0].id : currentCat;
             }
             if (allData.length > 0) {
+                managePreload();
                 renderCategories();
                 renderMenu();
             }
@@ -822,6 +846,44 @@ function guardarCacheLocal() {
         }));
     } catch (e) {
         console.warn('[Caché local] No se pudo guardar la caché (¿localStorage lleno o bloqueado?):', e.message);
+    }
+}
+
+// NUEVO (27 agosto): recordar el último estado CONFIRMADO de pestañas/fotos/info entre visitas.
+// Objetivo: la web pinta el menú al instante (desde MENU_CACHE_KEY) mucho antes de que responda
+// ?accion=categorias (1,5 a varios segundos) — hasta ahora, mientras tanto, se asumía "todo
+// activo", así que si en realidad "Fotos" (o una pestaña) estaba desactivada, se veía un
+// instante y desaparecía al llegar la respuesta real ("flash"), además de arrancar una precarga
+// de fotos que luego había que cortar. Guardando aquí el último estado real, la visita
+// SIGUIENTE ya puede partir de él desde el primer pintado — sin esperar nada — y solo hace
+// falta corregir si de verdad ha cambiado desde entonces (ver idsIguales más abajo).
+const TOGGLES_CACHE_KEY = 'usopenTogglesCacheV1';
+
+// Compara dos Set de ids por contenido (no por referencia).
+function idsIguales(a, b) {
+    if (a.size !== b.size) return false;
+    for (const id of a) { if (!b.has(id)) return false; }
+    return true;
+}
+
+function leerTogglesCacheLocal() {
+    try {
+        const raw = localStorage.getItem(TOGGLES_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.ids)) return null;
+        return new Set(parsed.ids);
+    } catch (e) {
+        console.warn('[Toggles] No se pudo leer el último estado conocido, se asume todo activo:', e.message);
+        return null;
+    }
+}
+
+function guardarTogglesCacheLocal(idsDeshabilitados) {
+    try {
+        localStorage.setItem(TOGGLES_CACHE_KEY, JSON.stringify({ ids: Array.from(idsDeshabilitados) }));
+    } catch (e) {
+        console.warn('[Toggles] No se pudo guardar el último estado conocido:', e.message);
     }
 }
 
