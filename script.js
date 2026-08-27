@@ -417,6 +417,13 @@ async function init() {
 
             categoriasPromise.then(categoriasDeshabilitadas => {
                 idsGlobalesDesactivados = categoriasDeshabilitadas;
+                // NUEVO (27 agosto): la primera managePreload() (línea de arriba) se lanzó antes
+                // de saber si "Fotos" estaba desactivada, así que pudo haber empezado a precargar
+                // sin necesidad. Ahora que ya se sabe, se vuelve a llamar para que corte esa
+                // precarga en curso (currentPreloadSession la invalida) si el toggle está activo.
+                if (categoriasDeshabilitadas.has('fotos')) {
+                    managePreload();
+                }
                 if (categoriasDeshabilitadas.size === 0) return;
                 categoriesList = categoriesList.filter(c => !categoriasDeshabilitadas.has(c.id));
                 if (!categoriesList.some(c => c.id === currentCat)) {
@@ -474,6 +481,12 @@ async function init() {
 
         categoriasPromise.then(categoriasDeshabilitadas => {
             idsGlobalesDesactivados = categoriasDeshabilitadas; // fotos/info conviven en el mismo Set
+            // NUEVO (27 agosto): igual que en la rama de caché — la managePreload() de más arriba
+            // se lanzó sin saber aún si "Fotos" estaba desactivada; si resulta que sí, se vuelve a
+            // llamar para cortar la precarga que ya pudiera estar en curso.
+            if (categoriasDeshabilitadas.has('fotos')) {
+                managePreload();
+            }
             if (categoriasDeshabilitadas.size === 0) return;
             categoriesList = categoriesList.filter(c => !categoriasDeshabilitadas.has(c.id));
             if (!categoriesList.some(c => c.id === currentCat)) {
@@ -1090,6 +1103,16 @@ function managePreload() {
     const mySession = currentPreloadSession;
     isPreloading = false;
     preloadQueue = [];
+
+    // NUEVO (27 agosto): si la opción global "Fotos" está desactivada, no tiene sentido
+    // descargar en segundo plano fotos que el usuario nunca va a poder ver (generateItemHtml
+    // ya oculta el icono/miniatura/galería en ese caso). Antes esta función ignoraba el
+    // toggle y precargaba igualmente, gastando datos/batería sin ningún beneficio visible.
+    // El incremento de currentPreloadSession de arriba ya invalida cualquier precarga que
+    // estuviera en curso de una llamada anterior, así que basta con no encolar nada nuevo.
+    if (idsGlobalesDesactivados.has('fotos')) {
+        return;
+    }
 
     const sortedData = [...allData].sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10));
 
