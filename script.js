@@ -45,7 +45,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: URL del App Script para las peticiones de sincronización del sistema (US Open)
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4d3AzkjnVhy7k9H4ydOO_b909R9VuOgCvpmVOMNR8R60xEQSYEY5jT5L2FrLqZ8gd/exec';
-const APP_VERSION = 'v1.5.0-usopen';
+const APP_VERSION = 'v1.5.1-usopen';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -1400,12 +1400,25 @@ async function changeLanguage(l) {
     managePreload();
 }
 
+// NUEVO (28 agosto): la barra de categorías se puede arrastrar con el dedo/ratón, y al pulsar
+// una pestaña que queda fuera de la parte visible de esa barra, el usuario perdía de vista cuál
+// estaba activa (el resaltado oscuro de .cat-btn.active existe, pero de nada sirve si el propio
+// botón está desplazado fuera de la pantalla). Esta función trae siempre de vuelta a la vista el
+// botón de la categoría activa, sin mover el scroll vertical de la página (block:'nearest').
+function scrollActiveCategoryIntoView() {
+    const activeBtn = document.querySelector('#category-selector .cat-btn.active');
+    if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+}
+
 function filterCategory(id) {
     currentCat = id;
     renderCategories();
     renderMenu();
     window.scrollTo(0,0);
     managePreload();
+    scrollActiveCategoryIntoView();
 }
 
 init();
