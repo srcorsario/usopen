@@ -23,11 +23,11 @@
 }
 /* --- FIN ALÉRGENOS --- */
 
-:root { 
-    var(--bg): #ffffff; 
-    var(--text): #1c1c1e; 
-    var(--grey): #8e8e93; 
-    var(--border): #e5e5ea; 
+:root {
+    --bg: #ffffff;
+    --text: #1c1c1e;
+    --grey: #8e8e93;
+    --border: #e5e5ea;
 }
 
 body { 

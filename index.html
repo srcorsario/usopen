@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>US Open Menu</title>
     <link rel="icon" type="image/png" href="imagenes/icon.png">
-    <link rel="stylesheet" href="style.css">
+    <!-- NUEVO (28 agosto): igual que script.js, style.css necesita su propio ?v= de cache-busting
+         — hasta ahora no lo tenía, así que un cambio de CSS podía tardar hasta 10 minutos en
+         llegar al navegador del cliente aunque el archivo en GitHub ya fuera el nuevo. IMPORTANTE:
+         cada vez que se suba un style.css nuevo, hay que subir también este número. -->
+    <link rel="stylesheet" href="style.css?v=1">
 </head>
 <body>
     <header>
