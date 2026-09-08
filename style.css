@@ -125,11 +125,17 @@ header {
     vertical-align: middle;
 }
 
-/* MODIFICADO (8 septiembre): igualado a 56px, el mismo tamaño que el logo de la derecha
-   (negro.png), a petición del usuario -- antes eran 48px/56px. */
+/* MODIFICADO (8 septiembre): este logo también es un "lockup" (el símbolo + "us open" + "Rest."
+   apilados en el mismo PNG, con bastante margen alrededor) -- a diferencia de negro.png (un
+   icono suelto), aquí el conjunto solo ocupa una fracción de la altura total de la imagen, así
+   que a igual altura de <img> se veía más pequeño que el toro. El usuario confirmó que prefiere
+   mantener el logo completo (símbolo+texto) y simplemente agrandarlo, en vez de recortar el
+   texto -- probado visualmente hasta que el conjunto se ve del mismo tamaño/peso que el toro
+   (56px). Necesita más altura que el de Roland Garros porque el margen interno de este PNG es
+   aún mayor. */
 img.header-logo[src*="logo_web02.png"] {
-    height: 56px;
-    max-height: 56px;
+    height: 100px;
+    max-height: 100px;
 }
 
 /* NUEVO: Estilo para el título centrado del menú en el header */
