@@ -125,10 +125,11 @@ header {
     vertical-align: middle;
 }
 
-/* NUEVO: El logo de la izquierda se define con el doble de tamaño (48px) */
+/* MODIFICADO (8 septiembre): igualado a 56px, el mismo tamaño que el logo de la derecha
+   (negro.png), a petición del usuario -- antes eran 48px/56px. */
 img.header-logo[src*="logo_web02.png"] {
-    height: 48px;
-    max-height: 48px;
+    height: 56px;
+    max-height: 56px;
 }
 
 /* NUEVO: Estilo para el título centrado del menú en el header */
