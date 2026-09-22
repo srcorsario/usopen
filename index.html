@@ -3,296 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Components Dashboard</title>
-    
-    <!-- Cargamos los estilos por separado -->
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/componentes.css">
+    <title>US Open Menu</title>
+    <link rel="icon" type="image/png" href="imagenes/icon.png">
+    <!-- NUEVO (28 agosto): igual que script.js, style.css necesita su propio ?v= de cache-busting
+         — hasta ahora no lo tenía, así que un cambio de CSS podía tardar hasta 10 minutos en
+         llegar al navegador del cliente aunque el archivo en GitHub ya fuera el nuevo. IMPORTANTE:
+         cada vez que se suba un style.css nuevo, hay que subir también este número. -->
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
-    <div class="container">
-        <h1>🎮 Gestión de Componentes Retro</h1>
-        
-        <!-- MENÚ DE PESTAÑAS -->
-        <div class="tabs">
-            <button class="tab-btn active" data-sheet="Componentes">Componentes</button>
-            <button class="tab-btn" data-sheet="Stock_Almacen">Stock Físico</button>
-            <button class="tab-btn" data-sheet="Kits_Consolas">Kits</button>
-            <button class="tab-btn" data-sheet="Variantes_LCSC">LCSC Precios</button>
-            <button class="tab-btn" data-sheet="Variantes_AliExpress">AliExpress Precios</button>
-            <button class="tab-btn" data-sheet="Variantes_TME">TME Precios</button>
-            <button class="tab-btn" data-sheet="Gastos_Extra">Gastos</button>
-            <!-- NUEVO: pestaña "Pedidos" -- no corresponde a ninguna hoja de Google Sheets (no lleva
-                 data-sheet), solo alterna qué bloque se ve (ver #vista-tabla-wrapper /
-                 #vista-pedidos-wrapper y el listener de pestañas en app.js). Agrupa aquí el módulo
-                 de verificación/sincronización y el generador de pedido, que antes aparecían
-                 siempre debajo de cualquier pestaña. -->
-            <button class="tab-btn" data-tab="pedidos">📦 Pedidos</button>
+    <header>
+        <div class="header-logos">
+            <img src="logo_web02.png" alt="Logo US Open" class="header-logo">
+            <span id="header-menu-title"></span>
+            <img src="negro.png" alt="Logo Negro" class="header-logo">
         </div>
 
-        <!-- BLOQUE DE TABLA (pestañas normales, ligadas a una hoja) -->
-        <div id="vista-tabla-wrapper">
-            <!-- TARJETA PRINCIPAL -->
-            <div class="card">
-                <h2 id="titulo-vista">Cargando datos...</h2>
-                <div id="contenedor-tabla" style="overflow-x: auto;">
-                    <p>Conectando con Google Sheets...</p>
+        <div id="language-selector">
+            <button id="btn-ES" onclick="changeLanguage('ES')" class="active">Español</button>
+            <button id="btn-EN" onclick="changeLanguage('EN')">English</button>
+            <button id="btn-DE" onclick="changeLanguage('DE')">Deutsch</button>
+            <button id="btn-FR" onclick="changeLanguage('FR')">Français</button>
+            <button id="btn-IT" onclick="changeLanguage('IT')">Italiano</button>
+            <select id="more-langs" onchange="changeLanguage(this.value)">
+                <option value="">🌐 Más...</option>
+            </select>
+        </div>
+        <div class="category-wrapper">
+            <nav id="category-selector"></nav>
+        </div>
+    </header>
+
+    <main id="menu-container">
+        <h2 id="current-category-name"></h2>
+        <div id="items-list">
+            <div class="item-row skeleton-row">
+                <div class="item-content">
+                    <span class="skeleton-text line-70"></span>
+                    <span class="skeleton-text line-40"></span>
+                </div>
+                <div class="price-box">
+                    <span class="skeleton-text line-20"></span>
+                </div>
+            </div>
+            <div class="item-row skeleton-row">
+                <div class="item-content">
+                    <span class="skeleton-text line-60"></span>
+                    <span class="skeleton-text line-30"></span>
+                </div>
+                <div class="price-box">
+                    <span class="skeleton-text line-20"></span>
+                </div>
+            </div>
+            <div class="item-row skeleton-row">
+                <div class="item-content">
+                    <span class="skeleton-text line-50"></span>
+                    <span class="skeleton-text line-40"></span>
+                </div>
+                <div class="price-box">
+                    <span class="skeleton-text line-20"></span>
                 </div>
             </div>
         </div>
+    </main>
 
-        <!-- BLOQUE DE PEDIDOS (pestaña "📦 Pedidos") -- oculto por defecto, ver app.js -->
-        <div id="vista-pedidos-wrapper" style="display: none;">
-            <!-- TARJETA SECUNDARIA -->
-            <div class="card">
-                <h2>🛠️ Módulo de Preparación de Pedidos</h2>
-                <p style="color: var(--text-secondary); font-size: 14px;">Selecciona un kit para verificar si tenemos el stock físico necesario en almacén.</p>
-
-                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
-                    <select id="select-kit" style="padding: 10px; border-radius: 4px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); flex-grow: 1;">
-                        <option value="">Cargando kits...</option>
-                    </select>
-                    <button id="btn-verificar-stock" class="btn">Verificar Stock Físico</button>
-                </div>
-
-                <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-                    <!-- MODIFICADO: los 6 botones sueltos de sincronización se han reducido a uno solo
-                         ("Sincronizar Todo"), que en Apps Script encadena LCSC + TME + las 3 columnas
-                         de Kits_Consolas. Se dejan aparte los dos asistentes manuales (AliExpress no se
-                         puede automatizar, y TME manual sirve de respaldo si el automático falla). -->
-                    <p style="color: var(--text-secondary); font-size: 14px;">Sincroniza precios y stock desde los proveedores, y las columnas de Kits que dependen de ellos.</p>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button id="btn-sync-todo" class="btn" style="background: var(--success);">🔄 Sincronizar Todo (LCSC + TME + Kits)</button>
-                        <button id="btn-sync-aliexpress" class="btn" style="background: var(--primary);">Añadir Variante AliExpress (Manual)</button>
-                        <button id="btn-sync-tme" class="btn" style="background: var(--tme-color);">Añadir Variante TME (Manual)</button>
-                    </div>
-                </div>
-
-                <div id="msg-pedidos" style="font-size: 14px; line-height: 1.5; margin-top: 15px;"></div>
-            </div>
-
-            <!-- NUEVO: TARJETA GENERADOR DE PEDIDO -->
-            <div class="card" style="margin-top: 20px;">
-                <h2>🧾 Generar Pedido</h2>
-                <p style="color: var(--text-secondary); font-size: 14px;">Selecciona los kits que vas a montar y cuántas unidades de cada uno. Se suman los componentes de todos los kits marcados.</p>
-
-                <div id="pedido-lista-kits" style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px; max-height:280px; overflow-y:auto; border:1px solid var(--border-color); border-radius:6px; padding:10px;">
-                    <p style="color:var(--text-secondary); font-size:13px;">Cargando kits...</p>
-                </div>
-
-                <button id="btn-calcular-pedido" class="btn" style="background: var(--primary);">Calcular Pedido</button>
-
-                <div id="pedido-resultado" style="margin-top:20px;"></div>
-            </div>
-        </div>
+    <div id="photo-modal" onclick="closeModal()">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <button id="prev-btn" class="nav-btn" onclick="changePhoto(-1); event.stopPropagation();">❮</button>
+        <img id="modal-img" src="" alt="Vista previa" onclick="event.stopPropagation();">
+        <button id="next-btn" class="nav-btn" onclick="changePhoto(1); event.stopPropagation();">❯</button>
     </div>
 
-    <!-- MODAL ALIEXPRESS -->
-    <div id="modal-aliexpress" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h3>Añadir Variante AliExpress</h3>
-            <div style="margin-bottom: 15px;">
-                <label for="ali-id-componente" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">ID Componente:</label>
-                <select id="ali-id-componente" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;"></select>
-            </div>
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <div style="flex: 1;">
-                    <label for="ali-uds-pack" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Uds por Pack:</label>
-                    <input type="number" id="ali-uds-pack" value="1" min="1" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                </div>
-                <div style="flex: 1;">
-                    <label for="ali-precio-pack" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Precio Pack (€):</label>
-                    <input type="number" id="ali-precio-pack" step="0.01" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                </div>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <label for="ali-stock-packs" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Stock Disponible:</label>
-                <input type="number" id="ali-stock-packs" value="100" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-            </div>
-            <div class="modal-actions">
-                <button id="btn-cancel-aliexpress" class="btn" style="background: var(--danger);">Cancelar</button>
-                <button id="btn-submit-aliexpress" class="btn" style="background: var(--success);">Guardar Variante</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL TME -->
-    <div id="modal-tme" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h3>Añadir Variante TME</h3>
-            <div style="margin-bottom: 15px;">
-                <label for="tme-id-componente" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">ID Componente:</label>
-                <select id="tme-id-componente" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;"></select>
-            </div>
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <div style="flex: 1;">
-                    <label for="tme-uds-pack" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Uds por Pack:</label>
-                    <input type="number" id="tme-uds-pack" value="1" min="1" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                </div>
-                <div style="flex: 1;">
-                    <label for="tme-precio-pack" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Precio Pack (€):</label>
-                    <input type="number" id="tme-precio-pack" step="0.01" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                </div>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <label for="tme-stock-packs" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Stock Disponible:</label>
-                <input type="number" id="tme-stock-packs" value="100" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-            </div>
-            <div class="modal-actions">
-                <button id="btn-cancel-tme" class="btn" style="background: var(--danger);">Cancelar</button>
-                <button id="btn-submit-tme" class="btn" style="background: var(--tme-color);">Guardar Variante</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- NUEVO: MODAL AÑADIR STOCK FÍSICO (pestaña Stock Físico) -->
-    <div id="modal-stock" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h3>➕ Añadir Stock Físico</h3>
-            <div style="margin-bottom: 15px;">
-                <label for="stock-id-componente" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Componente:</label>
-                <select id="stock-id-componente" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;"></select>
-            </div>
-            <div style="margin-bottom: 5px;">
-                <label for="stock-cantidad" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Unidades a añadir:</label>
-                <input type="number" id="stock-cantidad" value="1" min="1" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-            </div>
-            <p style="font-size:12px; color:var(--text-secondary); margin-top:5px;">Se SUMA a lo que ya tengas en stock de ese componente (si todavía no tiene ninguna fila en Stock_Almacen, se crea una nueva).</p>
-            <div class="modal-actions">
-                <button id="btn-cancel-stock" class="btn" style="background: var(--danger);">Cancelar</button>
-                <button id="btn-submit-stock" class="btn" style="background: var(--success);">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- NUEVO (2026-09-09): MODAL AÑADIR STOCK EN CAMINO (pestaña Stock Físico) -->
-    <div id="modal-stock-camino" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h3>🚚 Añadir Stock en Camino</h3>
-            <div style="margin-bottom: 15px;">
-                <label for="stock-camino-id-componente" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Componente:</label>
-                <select id="stock-camino-id-componente" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;"></select>
-            </div>
-            <div style="margin-bottom: 5px;">
-                <label for="stock-camino-cantidad" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Unidades pedidas (todavía sin llegar):</label>
-                <input type="number" id="stock-camino-cantidad" value="1" min="1" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-            </div>
-            <p style="font-size:12px; color:var(--text-secondary); margin-top:5px;">Se SUMA a lo que ya hubiera en camino de ese componente. No cuenta como stock físico en almacén hasta que pulses "✅ Recibir" en su fila (pero sí se tiene en cuenta para calcular kits/packs preparables y verificar stock).</p>
-            <div class="modal-actions">
-                <button id="btn-cancel-stock-camino" class="btn" style="background: var(--danger);">Cancelar</button>
-                <button id="btn-submit-stock-camino" class="btn" style="background: var(--primary);">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODIFICADO (2026-09-10): el modal "✅ Recibir Stock" (uno por fila, con recarga tras cada
-         uno) se sustituyó por checkboxes + cantidad editable directamente en la tabla de Stock
-         Físico y un único botón "✅ Aplicar Recibidos" -- ver renderStockAlmacen en ui.js y
-         aplicarRecibidosLote en pedidos.js. Ya no hace falta este modal. -->
-
-    <!-- NUEVO (2026-09-10): MODAL NUEVO PEDIDO (pestaña Stock Físico) -- registra un pedido
-         completo (proveedor + gastos de envío/aduana + líneas de artículos) para calcular el
-         precio real por unidad ya repartido el gasto extra, y sumarlo como stock físico con su
-         coste medio ponderado (ver guardarPedidoCompleto en Codigo.gs) -->
-    <div id="modal-pedido" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="max-width: 620px;">
-            <h3>📦 Nuevo Pedido</h3>
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <div style="flex: 1;">
-                    <label for="pedido-proveedor" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Proveedor:</label>
-                    <select id="pedido-proveedor" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                        <option value="LCSC">LCSC</option>
-                        <option value="ALIEXPRESS">AliExpress</option>
-                        <option value="TME">TME</option>
-                        <option value="MOUSER">Mouser</option>
-                        <option value="OTRO">Otro...</option>
-                    </select>
-                </div>
-                <div style="flex: 1;">
-                    <label for="pedido-proveedor-otro" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Nombre proveedor:</label>
-                    <input type="text" id="pedido-proveedor-otro" placeholder="p.ej. Amazon" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; display:none;">
-                </div>
-            </div>
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <div style="flex: 1;">
-                    <label for="pedido-fecha" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Fecha:</label>
-                    <input type="date" id="pedido-fecha" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                </div>
-                <div style="flex: 1;">
-                    <label for="pedido-gastos-envio" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Gastos de envío (€):</label>
-                    <input type="number" id="pedido-gastos-envio" step="0.01" min="0" value="0" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                </div>
-            </div>
-            <!-- NUEVO (2026-09-10): gastos de manipulación/preparación (a petición del usuario) --
-                 se suman siempre junto al gasto de envío, repartidos igual entre las líneas -- y
-                 un descuento en € que RESTA del gasto extra a repartir (por si el proveedor aplica
-                 algún descuento sobre el pedido). -->
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <div style="flex: 1;">
-                    <label for="pedido-gastos-manipulacion" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Gastos de manipulación (€):</label>
-                    <input type="number" id="pedido-gastos-manipulacion" step="0.01" min="0" value="0" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                </div>
-                <div style="flex: 1;">
-                    <label for="pedido-descuento" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Descuento (€):</label>
-                    <input type="number" id="pedido-descuento" step="0.01" min="0" value="0" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                </div>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-secondary); cursor:pointer;">
-                    <input type="checkbox" id="pedido-aplica-aduana"> Aplicar gasto de aduanas a este pedido
-                </label>
-                <div id="pedido-aduana-wrap" style="display:none; margin-top:8px;">
-                    <label for="pedido-gastos-aduana" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Gastos de aduana (€):</label>
-                    <input type="number" id="pedido-gastos-aduana" step="0.01" min="0" value="0" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                </div>
-            </div>
-
-            <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-bottom: 10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <strong style="font-size:13px;">Artículos del pedido</strong>
-                    <button type="button" id="btn-add-linea-pedido" class="btn-small" style="background: var(--primary);">+ Añadir línea</button>
-                </div>
-                <div id="pedido-lineas-container" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;"></div>
-            </div>
-
-            <p style="font-size:12px; color:var(--text-secondary); margin-top:5px;">El precio unitario que pongas por artículo es el que factura el proveedor (sin envío/manipulación/aduana). El gasto extra del pedido se reparte proporcionalmente al valor de cada línea. Como el pedido todavía no ha llegado, la cantidad se suma a "Stock en Camino" (no a stock disponible) con su precio real ya calculado -- ese precio se mezclará en el coste medio real solo cuando confirmes la llegada con "✅ Recibir" en su fila.</p>
-
-            <div id="msg-pedido-modal" style="font-size:13px; margin-top:10px;"></div>
-
-            <div class="modal-actions">
-                <button id="btn-cancel-pedido" class="btn" style="background: var(--danger);">Cancelar</button>
-                <button id="btn-submit-pedido" class="btn" style="background: var(--success);">Guardar Pedido</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- NUEVO (2026-09-10): MODAL APLICAR ADUANAS (pestaña Stock Físico) -- para cuando el gasto
-         de aduana de un pedido ya guardado no se sabía en su momento y se conoce después (avisos
-         de Correos/courier al llegar el paquete). Selecciona un pedido ya existente y aplica (o
-         corrige) su gasto de aduana; Codigo.gs reparte el ajuste entre sus líneas
-         (ver aplicarAduanaAPedido) -->
-    <div id="modal-aduana-pedido" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h3>🛃 Aplicar Aduanas a un Pedido</h3>
-            <div style="margin-bottom: 15px;">
-                <label for="aduana-id-pedido" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Pedido:</label>
-                <select id="aduana-id-pedido" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-                    <option value="">Cargando pedidos...</option>
-                </select>
-            </div>
-            <div style="margin-bottom: 5px;">
-                <label for="aduana-gastos" style="display:block; font-size:12px; margin-bottom:5px; color:var(--text-secondary);">Gastos de aduana (€):</label>
-                <input type="number" id="aduana-gastos" step="0.01" min="0" value="0" style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box;">
-            </div>
-            <p style="font-size:12px; color:var(--text-secondary); margin-top:5px;">Se recalcula el reparto de ESE pedido con este gasto de aduana (el envío/manipulación/descuento no cambian) y se actualiza el precio real de sus artículos. Si ya has recibido parte de este pedido, el ajuste solo afecta a lo que sigue en camino -- aplícalo antes de "✅ Recibir" siempre que puedas.</p>
-            <div id="msg-aduana-modal" style="font-size:13px; margin-top:10px;"></div>
-            <div class="modal-actions">
-                <button id="btn-cancel-aduana" class="btn" style="background: var(--danger);">Cancelar</button>
-                <button id="btn-submit-aduana" class="btn" style="background: var(--success);">Aplicar</button>
-            </div>
-        </div>
-    </div>
-
-    <script type="module" src="js/app.js"></script>
+    <!-- NUEVO (26 agosto): ?v= de cache-busting en script.js — sin esto, el navegador (sobre
+         todo en móvil) puede seguir sirviendo una copia antigua cacheada de script.js aunque el
+         archivo en GitHub ya sea el nuevo, igual que ya pasaba con la imagen del vino "El
+         Tenista" antes de que se le añadiera su propio ?v=. IMPORTANTE: cada vez que se suba un
+         script.js nuevo, hay que subir también este número (basta con que cambie, no hace falta
+         que coincida con APP_VERSION de dentro del script) — si no, esta protección no sirve de
+         nada porque el navegador seguirá viendo la misma URL de siempre. -->
+    <script src="script.js?v=1.6.2-usopen"></script>
 </body>
 </html>

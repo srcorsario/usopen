@@ -33,7 +33,10 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSOWewZgqWZEFYi
 // Apps Script desplegado en esta URL debe tener la versión de Código.gs con LockService y el
 // endpoint ?accion=csv (la que se ha preparado en Codigo_gs_US_OPEN.gs) — la versión que
 // había desplegada antes en US Open era distinta/antigua y NO soporta esta carga por etapas.
-const LIVE_CSV_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwouqhWugYlrVuc1Pv0h4BVaI3PPRkL13snFNxsntR1CLR7AxsloFvJ2b3l0JDFT788/exec';
+// ACTUALIZADO (22 sept): nueva implementación de Codigo_USOpen.gs (fix "se queda regenerando
+// la Info al tocar solo el precio" en el editor) -- la URL /exec cambió, sincronizada aquí con
+// config.js del editor y apps-script/urls.txt.
+const LIVE_CSV_ENDPOINT = 'https://script.google.com/macros/s/AKfycbweTq3o4NCOeBpZw-s65RgN9N311N5BLd1m9pA6_W9r6M_JdcxBsOrbyR8JLXAG9WbL/exec';
 // NUEVO: idiomas que se precargan en segundo plano justo después del primer render (además
 // del idioma del cliente, que siempre va primero). El resto de los 26 solo se piden bajo
 // demanda, cuando alguien los elige en el selector "Más...".
@@ -44,8 +47,8 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 // justificación izquierda como el resto de idiomas — ver updateLanguageUI().
 const RTL_LANGS = ['AR'];
 // NUEVO: URL del App Script para las peticiones de sincronización del sistema (US Open)
-const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwouqhWugYlrVuc1Pv0h4BVaI3PPRkL13snFNxsntR1CLR7AxsloFvJ2b3l0JDFT788/exec';
-const APP_VERSION = 'v1.6.1-usopen';
+const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweTq3o4NCOeBpZw-s65RgN9N311N5BLd1m9pA6_W9r6M_JdcxBsOrbyR8JLXAG9WbL/exec';
+const APP_VERSION = 'v1.6.2-usopen';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
