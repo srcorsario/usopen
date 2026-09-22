@@ -1,0 +1,44 @@
+usopen-main (web pública de US Open) — Apps Script de referencia
+=====================================================================
+
+Este repo es la web pública del menú de US Open (index.html + script.js +
+style.css, ver LIVE_CSV_ENDPOINT/APP_SCRIPT_URL dentro de script.js). El
+Apps Script real vive en el proyecto del Web Editor Pro (editor de la
+carta), no aquí — Codigo_USOpen.gs de esta carpeta es solo una COPIA de
+referencia para tenerlo a mano, igual que en apps-script/ del editor. No se
+edita aquí para que surta efecto: hay que pegarlo en el proyecto de Apps
+Script correspondiente (Extensiones > Apps Script, desde la hoja de Google
+Sheets de US Open) y desplegar desde ahí.
+
+URL /exec actual (LIVE_CSV_ENDPOINT y APP_SCRIPT_URL en script.js de este
+repo, y WEB_APP_URL_RESTAURANTE002 en config.js del Web Editor Pro):
+https://script.google.com/macros/s/AKfycbweTq3o4NCOeBpZw-s65RgN9N311N5BLd1m9pA6_W9r6M_JdcxBsOrbyR8JLXAG9WbL/exec
+
+(ANTERIOR, sustituida el 22 sept 2026: https://script.google.com/macros/s/AKfycbwouqhWugYlrVuc1Pv0h4BVaI3PPRkL13snFNxsntR1CLR7AxsloFvJ2b3l0JDFT788/exec)
+
+Cómo desplegar un cambio
+  1. Abrir la hoja de Google Sheets de US Open.
+  2. Extensiones > Apps Script.
+  3. Sustituir todo el contenido de Código.gs por la versión actualizada
+     (la de esta carpeta, o la de apps-script/Codigo_USOpen.gs del Web
+     Editor Pro — deben mantenerse idénticas).
+  4. Implementar > Gestionar implementaciones > icono de lápiz sobre la
+     implementación web existente > Versión: Nueva versión > Implementar.
+     OJO: hay que EDITAR la implementación existente (no crear una nueva),
+     para que la URL /exec no cambie y no haga falta tocar script.js de
+     este repo ni config.js del editor.
+  5. Si en vez de eso se crea una implementación NUEVA, la URL /exec
+     cambia: hay que actualizarla aquí, en LIVE_CSV_ENDPOINT/APP_SCRIPT_URL
+     de script.js (y subir APP_VERSION + el ?v= de index.html), y en
+     config.js + apps-script/urls.txt del Web Editor Pro.
+
+22 septiembre 2026 — recuperación de este repo: el índice y los scripts de
+esta web se habían sobrescrito por error con los del proyecto no
+relacionado "retro_componentes_web" (Retro Components Dashboard). Se
+restauraron index.html/script.js/style.css reales del menú y se borraron
+las carpetas css/, js/ y apps_scripts/ que pertenecían a ese otro proyecto
+(su Apps Script de sincronización de componentes no tiene nada que ver con
+este repo). Esta carpeta apps_scripts/ se crea de nuevo aquí, ahora con el
+contenido correcto (Codigo_USOpen.gs real de US Open).
+
+Última actualización de este archivo: 2026-09-22.
